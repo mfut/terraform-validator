@@ -26,27 +26,31 @@ terraform {
 provider "google" {
   {{if .Provider.credentials }}credentials = "{{.Provider.credentials}}"{{end}}
 }
-resource "google_compute_network" "redis-network" {
-  name = "redis-test-network"
-}
 
-resource "google_redis_instance" "cache" {
-  name           = "ha-memory-cache"
-  tier           = "STANDARD_HA"
-  memory_size_gb = 1
+resource "google_compute_security_policy" "policy" {
+  name = "my-policy"
 
-  region = "us-central1"
-  location_id             = "us-central1-a"
-  alternative_location_id = "us-central1-f"
+  rule {
+    action   = "deny(403)"
+    priority = "1000"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["9.9.9.0/24"]
+      }
+    }
+    description = "Deny access to IPs in 9.9.9.0/24"
+  }
 
-  authorized_network = google_compute_network.redis-network.id
-
-  redis_version     = "REDIS_4_0"
-  display_name      = "Terraform Test Instance"
-  reserved_ip_range = "192.168.0.0/29"
-
-  labels = {
-    my_key    = "my_val"
-    other_key = "other_val"
+  rule {
+    action   = "allow"
+    priority = "2147483647"
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+    description = "default rule"
   }
 }
